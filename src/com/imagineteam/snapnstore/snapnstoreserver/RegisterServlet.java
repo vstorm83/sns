@@ -12,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.Date;
 import java.util.UUID;
 
@@ -141,12 +142,14 @@ public class RegisterServlet extends HttpServlet {
 			    			 		" usertype, " +
 			    			 		" phonenumber, " +
 			    			 		" name, " +
+			    			 		" businessname, " +
 			    			 		(inputJSON.has("iphonepushtoken") ? " iphonepushtoken, " : "") +
 			    			 		(inputJSON.has("androidpushtoken") ? " androidpushtoken, " : "") +
 			    			 		" passwordhash," +
 			    			 		" created ) " +
 						      		"VALUES " + 
 						      		"( ? ," +
+						      		" ? ," +
 						      		" ? ," +
 						      		" ? ," +
 						      		" ? ," +
@@ -167,6 +170,11 @@ public class RegisterServlet extends HttpServlet {
 			      stmt.setString(i++, "customer");
 			      stmt.setString(i++, userphonenumber);
 			      stmt.setString(i++, inputJSON.getString("name"));
+			      String business = null;
+			      if (inputJSON.has("businessName")) {
+			    	  business = inputJSON.getString("businessName");
+			      }
+			      stmt.setString(i++, business);
 			      
 			      if (inputJSON.has("iphonepushtoken"))
 			      {

@@ -30,7 +30,8 @@ public class Email {
 			
 			String fromemail = "mailserver@imagineteamsolutions.com";
 			
-			String toemail = "connect+snapnstore@imagineteamsolutions.com";
+//			String toemail = "connect+snapnstore@imagineteamsolutions.com";
+			String toemail = "loweblue@gmail.com";
 		
 			IO.p("SendingAlertEmail (" + subject + "):" + content);
 			
