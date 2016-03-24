@@ -111,6 +111,7 @@ public class CustomerGetInventoryServlet extends HttpServlet {
 						  	  		" items.imageurl, " +
 						  	  		" items.returning, " +
 						  	  		" items.instancecount " +
+						  	  		" items.quantity " +
 					  	    		" FROM items" +
 					  	    		" WHERE items.ownerid = ? AND items.delivered != 1 AND items.returning != 1 ";
 							
@@ -130,6 +131,7 @@ public class CustomerGetInventoryServlet extends HttpServlet {
 					  	    		
 					  	    		thisitem.put("itemid", items_rs.getString("itemid"));
 					  	    		thisitem.put("imageurl", items_rs.getString("imageurl"));
+					  	    		thisitem.put("quantity", items_rs.getInt("quantity"));
 					  	    		
 					  	    		//thisitem.put("instancecount", items_rs.getInt("instancecount"));
 					  	    		//thisitem.put("beingdelivered", 1 == items_rs.getInt("returning"));
