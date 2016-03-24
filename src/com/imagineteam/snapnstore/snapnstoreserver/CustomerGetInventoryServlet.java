@@ -110,7 +110,7 @@ public class CustomerGetInventoryServlet extends HttpServlet {
 				  	    		  	" items.itemid," +
 						  	  		" items.imageurl, " +
 						  	  		" items.returning, " +
-						  	  		" items.instancecount " +
+						  	  		" items.instancecount, " +
 						  	  		" items.quantity " +
 					  	    		" FROM items" +
 					  	    		" WHERE items.ownerid = ? AND items.delivered != 1 AND items.returning != 1 ";

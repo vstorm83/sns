@@ -57,7 +57,7 @@ public class PayByInvoice extends HttpServlet {
           conn = DriverManager.getConnection("jdbc:mysql://localhost/wp_snapnstore?" + "user=wpsnapuser&password=wpsnappassword");
 
           // Check if sessionid is valid
-          String sessionidstatement = "SELECT userid, name, email, phone FROM appusers WHERE sessionid = ?";
+          String sessionidstatement = "SELECT userid, name, email, phonenumber FROM appusers WHERE sessionid = ?";
 
           PreparedStatement sessionidstmt = conn.prepareStatement(sessionidstatement);
           int i = 1;
@@ -88,9 +88,9 @@ public class PayByInvoice extends HttpServlet {
             billing_stmt.setString(i++, inputJSON.getString("billingName"));
             billing_stmt.setString(i++, inputJSON.getString("billingAddress"));
             billing_stmt.setString(i++, inputJSON.getString("billingSurbub"));
-            billing_stmt.setString(i++, inputJSON.getString("billingPostCode"));
-            billing_stmt.setString(i++, inputJSON.getString("billingState"));
-            billing_stmt.setString(i++, inputJSON.getString("billingContactNumber"));
+            billing_stmt.setString(i++, String.valueOf(inputJSON.get("billingPostCode")));
+            billing_stmt.setString(i++, String.valueOf(inputJSON.get("billingState")));
+            billing_stmt.setString(i++, String.valueOf(inputJSON.get("billingContactNumber")));
             billing_stmt.setString(i++, inputJSON.getString("sessionid"));
 
             billing_stmt.executeUpdate();
@@ -103,21 +103,25 @@ public class PayByInvoice extends HttpServlet {
 
             PreparedStatement plans_stmt = conn.prepareStatement(plans_sql);
             plans_stmt.setInt(1, rs.getInt("userid"));
-            ResultSet plans_rs = plans_stmt.executeQuery();
             
-            String mCharge = plans_rs.getString("monthlycharge");
-            String description = plans_rs.getString("description");
+            String mCharge = "", description = "";
+            ResultSet plans_rs = plans_stmt.executeQuery();            
+            if (plans_rs.next()) {
+              mCharge = plans_rs.getString("monthlycharge");
+              description = plans_rs.getString("description");              
+            }
             
             StringBuilder content = new StringBuilder("Customer details:<br/>");
             content.append("Name: ").append(rs.getString("name"));
             content.append(" email: ").append(rs.getString("email"));
-            content.append(" phone: ").append(rs.getString("phone"));
+            content.append(" phone: ").append(rs.getString("phonenumber"));
             content.append("<br/>Plan details:<br/>");
             content.append("Description: ").append(description);
             content.append("<br/>").append("Monthly charge: ").append(mCharge);
             Email.sendAlertEmail(getServletContext(), "A new user has registered via the app with the pay by invoice option", content.toString());
             
             result.put("success", true);
+            result.put("details", content);
           }
         } // End of check JSON parameters
       } // End of check get parameters.
