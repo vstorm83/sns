@@ -9,6 +9,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -20,10 +21,10 @@ import org.json.JSONObject;
 
 import sun.misc.BASE64Decoder;
 
-@WebServlet("/uUpdateInventory")
-public class CustomerUpdateInventoryServlet extends HttpServlet {
+@WebServlet("/uAddInventory")
+public class CustomerAddInventoryServlet extends HttpServlet {
 
-  private static final long serialVersionUID = -6236939698333145467L;
+  private static final long serialVersionUID = -7857514172332173649L;
 
   protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
     IO.alertDodgyGetRequest(getServletName(), getServletContext(), request);
@@ -52,8 +53,7 @@ public class CustomerUpdateInventoryServlet extends HttpServlet {
         inputString = inputJSON.toString(1);
         IO.p(this.getServletName() + " INPUT:" + inputJSON.toString());
 
-        if (!(inputJSON.has("sessionid") && inputJSON.has("itemid")
-            && (inputJSON.has("quantity") || inputJSON.has("imageurl") || inputJSON.has("note")))) {
+        if (!(inputJSON.has("sessionid"))) {
           result.put("success", false);
           result.put("error", "Missing mandatory parameters");
         } else {
@@ -86,73 +86,88 @@ public class CustomerUpdateInventoryServlet extends HttpServlet {
             rs.next();
 
             Integer userid = rs.getInt("userid");
-            String updateSql = "UPDATE items SET";
+            String insertSql = "INSERT INTO items (ownerid";
             if (inputJSON.has("quantity")) {
-              updateSql += " quantity=" + inputJSON.getInt("quantity") + ",";
+              insertSql += ", quantity";
             }
             if (inputJSON.has("imageurl")) {
-              updateSql += "imageurl='" + inputJSON.getString("imageurl") + "',";
-            } else if (inputJSON.has("imagedata")) {
-              String imgSql = "SELECT imageurl FROM items WHERE itemid=? AND ownerid=?";
-              PreparedStatement img_stmt = conn.prepareStatement(imgSql);
-              img_stmt.setInt(1, inputJSON.getInt("itemid"));
-              img_stmt.setInt(2, userid);
-              ResultSet imgResult = img_stmt.executeQuery();
-              if (imgResult.next()) {
-                String imageurl = imgResult.getString("imageurl");
-                if (imageurl != null) {
-                  File file = new File(imageurl.replace("http://snapnstore.imagineteamsolutions.com/",
-                                                        "/var/www/www.imagineteamsolutions.com/htdocs/"));
-                  if (file.exists()) {
-                    file.delete();
-                  }
-                }
-              }
-
-              String outputfolder = "/var/www/www.imagineteamsolutions.com/htdocs/www.snapnstore.com.au/htdocs/uploadedimages/";
-              File folder = new File(outputfolder);
-              if (!folder.exists()) {
-                folder.mkdir();
-                IO.p("Creating output folder:" + outputfolder);
-              } else {
-                IO.p("Output folder already exists:" + outputfolder);
-              }
-
-              String nopathfilename = "img_" + inputJSON.getInt("itemid");
-              File newFile = new File(outputfolder + File.separator + nopathfilename);
-              
-              String imageData = inputJSON.getString("imagedata");
-              BASE64Decoder decoder = new BASE64Decoder();
-              byte[] data = decoder.decodeBuffer(imageData);
-              
-              FileOutputStream fos = new FileOutputStream(newFile);
-              try {
-                fos.write(data);
-              } finally {
-                fos.close();
-              }
+              insertSql += ", imageurl";
             }
             if (inputJSON.has("note")) {
-              updateSql += " note='" + inputJSON.getString("note") + "',";
+              insertSql += ", note";
             }
-            updateSql = updateSql.substring(0, updateSql.length() - 1);
-            updateSql += " WHERE ownerid = ? AND itemid=?";
-
-            PreparedStatement items_stmt = conn.prepareStatement(updateSql);
-
+            insertSql += ") VALUES (?";
+            if (inputJSON.has("quantity")) {
+              insertSql += ", ?";
+            }
+            if (inputJSON.has("imageurl")) {
+              insertSql += ", ?";
+            }
+            if (inputJSON.has("note")) {
+              insertSql += ", ?";
+            }
+            insertSql += ")";
+            PreparedStatement items_stmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS);
+            
             i = 1;
             items_stmt.setInt(i++, userid);
-            items_stmt.setInt(i++, inputJSON.getInt("itemid"));
-            int updated = items_stmt.executeUpdate();
-
-            if (updated > 0) {
-              result.put("success", true);
+            if (inputJSON.has("quantity")) {
+              items_stmt.setInt(i++, inputJSON.getInt("quantity"));
+            }
+            if (inputJSON.has("imageurl")) {
+              items_stmt.setString(i++, inputJSON.getString("imageurl"));
+            }
+            if (inputJSON.has("note")) {
+              items_stmt.setString(i++, inputJSON.getString("note"));
+            }
+            int inserted = items_stmt.executeUpdate();
+            if (inserted == 1) {
+              ResultSet rs_key = items_stmt.getGeneratedKeys();
+              rs_key.next();
+              int id = rs_key.getInt(1);
+              
               if (inputJSON.has("imagedata")) {
-                result.put("imageurl", "http://snapnstore.imagineteamsolutions.com/www.snapnstore.com.au/htdocs/uploadedimages/img_" + inputJSON.getInt("itemid"));                
+                String outputfolder = "/var/www/www.imagineteamsolutions.com/htdocs/www.snapnstore.com.au/htdocs/uploadedimages/";
+                File folder = new File(outputfolder);
+                if (!folder.exists()) {
+                  folder.mkdir();
+                  IO.p("Creating output folder:" + outputfolder);
+                } else {
+                  IO.p("Output folder already exists:" + outputfolder);
+                }
+                
+                String nopathfilename = "img_" + id;
+                File newFile = new File(outputfolder + File.separator + nopathfilename);
+                
+                String imageData = inputJSON.getString("imagedata");
+                BASE64Decoder decoder = new BASE64Decoder();
+                byte[] data = decoder.decodeBuffer(imageData);
+                
+                FileOutputStream fos = new FileOutputStream(newFile);
+                try {
+                  fos.write(data);
+                } finally {
+                  fos.close();
+                }
+                
+                String updateImg = "UPDATE items SET imageurl=? WHERE itemid=?";
+                PreparedStatement updateImg_stmt = conn.prepareStatement(updateImg);
+                updateImg_stmt.setString(1, "http://snapnstore.imagineteamsolutions.com/www.snapnstore.com.au/htdocs/uploadedimages/img_" + id);
+                updateImg_stmt.setInt(2, id);
+                updateImg_stmt.executeUpdate();
+                
+                result.put("imageurl", "http://snapnstore.imagineteamsolutions.com/www.snapnstore.com.au/htdocs/uploadedimages/img_" + id);                
               }
+              
+              result.put("itemid", id);
+            }
+            
+
+            if (inserted == 1) {
+              result.put("success", true);
             } else {
               result.put("success", false);
-              result.put("error", "not found itemid: " + inputJSON.getInt("itemid") + "of userid: " + userid + "to update");
+              result.put("error", "can insert new item for ownerid: " + userid);
             }
 
           }
